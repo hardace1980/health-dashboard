@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Dashboard 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--text2:#8b92a8;--text3:#4a5168;
+  --green:#4ade80;--green-dim:rgba(74,222,128,0.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,0.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,0.12);
+  --blue:#60a5fa;--blue-dim:rgba(96,165,250,0.1);
+  --accent:#6ee7b7;--radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.mono{font-family:'Martian Mono',monospace;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:fixed;height:100vh;z-index:10;}
+.logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.logo-title{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:'Martian Mono',monospace;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--text2);cursor:pointer;font-size:14px;transition:all 0.15s;border-left:2px solid transparent;user-select:none;}
+.nav-item:hover{color:var(--text);background:var(--bg3);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(110,231,183,0.06);}
+.nav-icon{font-size:16px;width:18px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+.sync-status{font-size:11px;color:var(--text3);font-family:'Martian Mono',monospace;}
+.sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.main{margin-left:220px;flex:1;padding:32px;max-width:960px;}
+.page{display:none;}
+.page.active{display:block;}
+.page-title{font-size:22px;font-weight:500;color:var(--text);margin-bottom:6px;}
+.page-sub{font-size:14px;color:var(--text2);margin-bottom:28px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;}
+.card-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;font-family:'Martian Mono',monospace;}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:'Martian Mono',monospace;}
+.metric-val{font-size:28px;font-weight:300;color:var(--text);font-family:'Martian Mono',monospace;line-height:1;}
+.metric-val.green{color:var(--green);}
+.metric-val.amber{color:var(--amber);}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:5px;}
+.check-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.check-item:last-child{border-bottom:none;}
+.check-item:hover{opacity:0.85;}
+.check-box{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
+.check-box.done{background:var(--green);border-color:var(--green);}
+.check-box.done::after{content:'✓';font-size:11px;color:#0f1117;font-weight:700;}
+.check-text{font-size:14px;color:var(--text);transition:all 0.15s;}
+.check-text.done{color:var(--text3);text-decoration:line-through;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;color:var(--text3);font-weight:500;padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-family:'Martian Mono',monospace;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg3);}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;font-family:'Martian Mono',monospace;}
+.badge-green{background:var(--green-dim);color:var(--green);}
+.badge-amber{background:var(--amber-dim);color:var(--amber);}
+.badge-red{background:var(--red-dim);color:var(--red);}
+.badge-gray{background:var(--bg3);color:var(--text3);}
+.input-row{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap;}
+input[type=number]{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:8px 12px;font-family:'Martian Mono',monospace;width:130px;outline:none;transition:border-color 0.15s;}
+input:focus{border-color:var(--accent);}
+input::placeholder{color:var(--text3);}
+.btn{padding:8px 18px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
+.btn:hover{background:var(--bg3);border-color:var(--accent);color:var(--accent);}
+.btn-primary{background:var(--accent);color:#0f1117;border-color:var(--accent);font-weight:500;}
+.btn-primary:hover{background:#86efca;border-color:#86efca;color:#0f1117;}
+.rating-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.rating-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;transition:all 0.15s;font-family:'Martian Mono',monospace;}
+.rating-btn:hover{border-color:var(--accent);color:var(--accent);}
+.rating-btn.active{background:var(--accent);border-color:var(--accent);color:#0f1117;font-weight:500;}
+.progress-wrap{margin-top:14px;}
+.progress-info{display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px;font-family:'Martian Mono',monospace;}
+.progress-bg{height:4px;background:var(--bg3);border-radius:2px;}
+.progress-fill{height:4px;border-radius:2px;background:var(--accent);transition:width 0.4s;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.chart-wrap{position:relative;height:220px;margin-top:8px;}
+.meal-day{display:grid;grid-template-columns:60px 1fr;gap:4px;padding:10px 0;border-bottom:1px solid var(--border);align-items:start;}
+.meal-day:last-child{border-bottom:none;}
+.meal-day-name{font-size:11px;color:var(--text3);font-family:'Martian Mono',monospace;font-weight:500;padding-top:2px;}
+.meal-entry{font-size:13px;color:var(--text);padding:1px 0;}
+.meal-type-label{font-size:11px;color:var(--text3);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:100;transform:translateY(80px);opacity:0;transition:all 0.3s;}
+.toast.show{transform:translateY(0);opacity:1;}
+.loading{color:var(--text3);font-size:13px;text-align:center;padding:20px;font-family:'Martian Mono',monospace;}
+.diary-section{margin-bottom:18px;}
+.diary-label{font-size:12px;color:var(--text2);margin-bottom:8px;font-family:'Martian Mono',monospace;}
+@media(max-width:768px){
+  .sidebar{width:60px;}
+  .nav-item span,.logo-title,.logo-sub,.sync-status{display:none;}
+  .main{margin-left:60px;padding:16px;}
+  .metric-grid{grid-template-columns:repeat(2,1fr);}
+  .two-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-title">Health</div>
+      <div class="logo-sub mono">2026 · tracker</div>
+    </div>
+    <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">◈</span><span>Обзор</span></div>
+    <div class="nav-item" onclick="showPage('weight')"><span class="nav-icon">⊡</span><span>Вес</span></div>
+    <div class="nav-item" onclick="showPage('workout')"><span class="nav-icon">◎</span><span>Тренировки</span></div>
+    <div class="nav-item" onclick="showPage('food')"><span class="nav-icon">◇</span><span>Питание</span></div>
+    <div class="nav-item" onclick="showPage('diary')"><span class="nav-icon">◉</span><span>Дневник</span></div>
+    <div class="nav-item" onclick="showPage('goals')"><span class="nav-icon">△</span><span>Цели</span></div>
+    <div class="sidebar-footer"><div class="sync-status mono"><span class="sync-dot"></span>Supabase sync</div></div>
+  </nav>
+
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page active">
+      <div class="page-title">Обзор</div>
+      <div class="page-sub">Сегодня, <span id="today-date"></span></div>
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-label">Текущий вес</div><div class="metric-val mono" id="m-weight">102</div><div class="metric-sub">кг · старт 102</div></div>
+        <div class="metric"><div class="metric-label">До цели</div><div class="metric-val mono amber" id="m-goal-diff">27</div><div class="metric-sub">кг · цель 75</div></div>
+        <div class="metric"><div class="metric-label">Тренировок</div><div class="metric-val mono green" id="m-workouts">0</div><div class="metric-sub">из 3 этой нед.</div></div>
+        <div class="metric"><div class="metric-label">Сон</div><div class="metric-val mono" id="m-sleep">—</div><div class="metric-sub">часов вчера</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Чеклист на сегодня</div>
+          <div id="checklist-today"><div class="loading">Загрузка...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Прогресс к целям</div>
+          <table>
+            <tr><th>Цель</th><th>Сейчас</th><th>Цель</th><th></th></tr>
+            <tr><td>Вес (кг)</td><td id="g-weight">102</td><td>75</td><td><span class="badge badge-amber">В процессе</span></td></tr>
+            <tr><td>Трен/нед</td><td id="g-workout">0</td><td>3</td><td><span class="badge badge-gray">Начать</span></td></tr>
+            <tr><td>Сон (ч)</td><td id="g-sleep">—</td><td>7.5</td><td><span class="badge badge-gray">Начать</span></td></tr>
+            <tr><td>Анализы</td><td>—</td><td>Сданы</td><td><span class="badge badge-red">Не сданы</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEIGHT -->
+    <div id="page-weight" class="page">
+      <div class="page-title">Вес и замеры</div>
+      <div class="page-sub">Взвешивайся утром натощак, раз в неделю</div>
+      <div class="card">
+        <div class="card-title">Внести замер</div>
+        <div class="input-row">
+          <input type="number" id="w-weight" placeholder="Вес, кг" step="0.1" min="50" max="200">
+          <input type="number" id="w-waist" placeholder="Талия, см" step="0.5">
+          <button class="btn btn-primary" onclick="saveWeight()">Сохранить</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Динамика веса</div>
+        <div class="chart-wrap"><canvas id="weightChart" role="img" aria-label="График динамики веса"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">История замеров</div>
+        <div id="weight-table"><div class="loading">Загрузка...</div></div>
+      </div>
+    </div>
+
+    <!-- WORKOUT -->
+    <div id="page-workout" class="page">
+      <div class="page-title">Тренировки</div>
+      <div class="page-sub">Недели 1–2: активация · 3 раза в неделю · 15–20 мин</div>
+      <div class="card">
+        <div class="card-title">Упражнения сегодня</div>
+        <div id="workout-list"><div class="loading">Загрузка...</div></div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>Выполнено</span><span id="workout-progress-text">0 / 6</span></div>
+          <div class="progress-bg"><div class="progress-fill" id="workout-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Расписание недели</div>
+        <table>
+          <tr><th>День</th><th>Активность</th><th>Длительность</th></tr>
+          <tr><td>Пн</td><td>Тренировка</td><td>20 мин</td></tr>
+          <tr><td>Вт</td><td>Растяжка</td><td>10 мин</td></tr>
+          <tr><td>Ср</td><td>Тренировка</td><td>20 мин</td></tr>
+          <tr><td>Чт</td><td>Растяжка</td><td>10 мин</td></tr>
+          <tr><td>Пт</td><td>Тренировка</td><td>20 мин</td></tr>
+          <tr><td>Сб</td><td>Активная прогулка</td><td>30–40 мин</td></tr>
+          <tr><td>Вс</td><td>Лёгкая растяжка</td><td>15 мин</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOD -->
+    <div id="page-food" class="page">
+      <div class="page-title">Питание</div>
+      <div class="page-sub">~1650 ккал/день · белок ~120г · без сахара в напитках</div>
+      <div class="two-col">
+        <div class="metric"><div class="metric-label">Калорий/день</div><div class="metric-val mono">1650</div><div class="metric-sub">дефицит ~450 ккал</div></div>
+        <div class="metric"><div class="metric-label">Белок</div><div class="metric-val mono green">120г</div><div class="metric-sub">в день</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Меню на неделю</div>
+        <div class="meal-day"><div class="meal-day-name">Пн</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Геркулес + молоко + 2 яйца варёных</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Гречка 150г + куриная грудка 150г + огурец + помидор</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Куриная грудка 120г + салат</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Вт</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Геркулес + молоко + 2 яйца варёных</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Рис 150г + курица тушёная 150г + салат</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Гречка 100г + курица 120г + сметана</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Ср</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Геркулес + молоко + 2 яйца варёных</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Полба 150г + куриное бедро 150г + огурец</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Картофель 100г + курица 120г + салат</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Чт</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Геркулес + молоко + 2 яйца варёных</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Гречка 150г + курица 150г + помидор</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Рис 100г + курица 120г + помидор</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Пт</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Геркулес + молоко + 2 яйца варёных</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Картофель 150г + курица 150г + салат</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Куриная грудка 150г + овощной салат</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Сб</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>2 яйца + бекон 2-3 пол. + помидор</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Рис 150г + курица 150г + овощи</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Полба 100г + курица 120г + сметана</div></div></div>
+        <div class="meal-day"><div class="meal-day-name">Вс</div><div><div class="meal-entry"><span class="meal-type-label">Завт · </span>Омлет 2 яйца + сыр 30г + огурец</div><div class="meal-entry"><span class="meal-type-label">Пер · </span>Кешью 30г</div><div class="meal-entry"><span class="meal-type-label">Обед · </span>Полба 150г + курица 150г + помидор</div><div class="meal-entry"><span class="meal-type-label">Ужин · </span>Гречка 100г + курица 120г + огурец</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Список продуктов на неделю</div>
+        <table>
+          <tr><th>Продукт</th><th>Кол-во</th><th>Назначение</th></tr>
+          <tr><td>Куриная грудка/бедро</td><td>~1.5 кг</td><td>Основной белок</td></tr>
+          <tr><td>Яйца</td><td>14 шт</td><td>Завтрак каждый день</td></tr>
+          <tr><td>Геркулес</td><td>350 г</td><td>Завтрак будни</td></tr>
+          <tr><td>Гречка</td><td>400 г</td><td>Обед и ужин</td></tr>
+          <tr><td>Рис</td><td>300 г</td><td>Обед и ужин</td></tr>
+          <tr><td>Полба</td><td>300 г</td><td>Обед и ужин</td></tr>
+          <tr><td>Картофель</td><td>400 г</td><td>Обед и ужин</td></tr>
+          <tr><td>Кешью</td><td>210 г</td><td>Перекус каждый день</td></tr>
+          <tr><td>Молоко 2.5%</td><td>1.4 л</td><td>Для геркулеса</td></tr>
+          <tr><td>Помидоры + огурцы</td><td>7–10 шт каждого</td><td>К обеду/ужину</td></tr>
+          <tr><td>Бекон</td><td>100 г</td><td>Завтрак суббота</td></tr>
+          <tr><td>Сыр</td><td>150 г</td><td>Завтрак воскресенье</td></tr>
+          <tr><td>Сметана 15%</td><td>200 г</td><td>К ужину вт, сб</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- DIARY -->
+    <div id="page-diary" class="page">
+      <div class="page-title">Дневник</div>
+      <div class="page-sub">Заполняй вечером — 2–3 минуты. Шкала 1–10.</div>
+      <div class="card">
+        <div class="card-title">Запись за сегодня</div>
+        <div class="diary-section">
+          <div class="diary-label">Энергия (1–10)</div>
+          <div class="rating-row" id="energy-row"></div>
+        </div>
+        <div class="diary-section">
+          <div class="diary-label">Настроение (1–10)</div>
+          <div class="rating-row" id="mood-row"></div>
+        </div>
+        <div class="diary-section">
+          <div class="diary-label">Боль в спине (1=нет, 10=сильная)</div>
+          <div class="rating-row" id="back-row"></div>
+        </div>
+        <div class="diary-section">
+          <div class="diary-label">Сон (часов)</div>
+          <div class="input-row">
+            <input type="number" id="d-sleep" placeholder="7.5" step="0.5" min="2" max="12">
+            <button class="btn btn-primary" onclick="saveDiary()">Сохранить запись</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">История записей</div>
+        <div id="diary-table"><div class="loading">Загрузка...</div></div>
+      </div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="page-goals" class="page">
+      <div class="page-title">Цели и результаты</div>
+      <div class="page-sub">Старт: май 2026</div>
+      <div class="card">
+        <div class="card-title">Ожидаемые результаты</div>
+        <table>
+          <tr><th>Срок</th><th>Что изменится</th><th>Статус</th></tr>
+          <tr><td>1–2 нед.</td><td>Лучше сон, больше энергии утром</td><td><span class="badge badge-amber">Ждём</span></td></tr>
+          <tr><td>3–4 нед.</td><td>−2–3 кг, меньше боли в спине</td><td><span class="badge badge-gray">—</span></td></tr>
+          <tr><td>6–8 нед.</td><td>Гибкость, тонус, одежда иначе</td><td><span class="badge badge-gray">—</span></td></tr>
+          <tr><td>3 мес.</td><td>−5–7 кг, осанка, больше сил</td><td><span class="badge badge-gray">—</span></td></tr>
+          <tr><td>6 мес.</td><td>−10–12 кг, явная форма</td><td><span class="badge badge-gray">—</span></td></tr>
+          <tr><td>12 мес.</td><td>−14–17 кг, стабильная форма</td><td><span class="badge badge-gray">—</span></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Первые шаги — чеклист</div>
+        <div id="goals-checklist"><div class="loading">Загрузка...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Анализы</div>
+        <table>
+          <tr><th>Анализ</th><th>Норма</th><th>Мой результат</th><th>Статус</th></tr>
+          <tr><td>Тестостерон общий</td><td>12–35 нмоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+          <tr><td>ТТГ</td><td>0.4–4.0 мМЕ/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+          <tr><td>Витамин D</td><td>&gt;75 нмоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+          <tr><td>Витамин B12</td><td>200–900 пг/мл</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+          <tr><td>Ферритин</td><td>30–300 нг/мл</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+          <tr><td>Глюкоза натощак</td><td>3.9–5.6 ммоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://vdqyvovabqicaddctxvd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkcXl2b3ZhYnFpY2FkZGN0eHZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxOTE3MTIsImV4cCI6MjA5Mzc2NzcxMn0.laPPnV6pvP79QQkPiTxE-x5-QsE86oDCOkMiplme-yM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TODAY = new Date().toLocaleDateString('ru-RU');
+const state = { energy: null, mood: null, back: null, workoutCount: 0 };
+
+const CHECKLIST_ITEMS = [
+  'Встать в 06:20',
+  'Зарядка / тренировка утром',
+  'Завтрак по плану',
+  'Перекус кешью в 16:00',
+  'Обед по плану',
+  'Ужин по плану',
+  'Лечь спать в 22:30',
+  'Без сахара в напитках'
+];
+
+const WORKOUT_ITEMS = [
+  { ex: 'Кошка-корова', detail: '10 повт · медленно' },
+  { ex: 'Ягодичный мост', detail: '3×15 · медленно' },
+  { ex: 'Птица-собака', detail: '3×10 каждой стороной' },
+  { ex: 'Растяжка грушевидной', detail: '30 сек × 2 стороны' },
+  { ex: 'Растяжка сгибателей бедра', detail: '30 сек × 2 стороны' },
+  { ex: 'Ходьба на месте', detail: '5 минут' }
+];
+
+const GOALS_ITEMS = [
+  'Записаться к терапевту на анализы',
+  'Записаться к неврологу по грыже',
+  'Сдать все анализы из списка',
+  'Купить продукты по плану питания',
+  'Провести первую тренировку',
+  'Взвеситься и сделать замеры',
+  'Соблюдать план питания 80%+ дней',
+  'Вести дневник самочувствия каждый день'
+];
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function today() {
+  return new Date().toLocaleDateString('ru-RU');
+}
+
+// Rating rows
+function buildRatingRow(id, type) {
+  const row = document.getElementById(id);
+  row.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'rating-btn';
+    btn.textContent = i;
+    btn.onclick = () => {
+      row.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state[type] = i;
+    };
+    row.appendChild(btn);
+  }
+}
+
+// Checklist
+async function loadChecklist(containerId, items, table) {
+  const container = document.getElementById(containerId);
+  const d = today();
+  const { data } = await sb.from(table).select('*').eq('date', d);
+  const doneSet = new Set((data || []).filter(r => r.done).map(r => r.item));
+  container.innerHTML = '';
+  items.forEach(item => {
+    const isDone = doneSet.has(item);
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.innerHTML = `<div class="check-box ${isDone ? 'done' : ''}"></div><div class="check-text ${isDone ? 'done' : ''}">${item}</div>`;
+    div.onclick = async () => {
+      const box = div.querySelector('.check-box');
+      const txt = div.querySelector('.check-text');
+      const nowDone = !box.classList.contains('done');
+      box.classList.toggle('done', nowDone);
+      txt.classList.toggle('done', nowDone);
+      await sb.from(table).upsert({ date: d, item, done: nowDone }, { onConflict: 'date,item' });
+      if (table === 'workout_log') updateWorkoutProgress();
+    };
+    container.appendChild(div);
+  });
+}
+
+async function loadWorkoutChecklist() {
+  const container = document.getElementById('workout-list');
+  const d = today();
+  const { data } = await sb.from('workout_log').select('*').eq('date', d);
+  const doneSet = new Set((data || []).filter(r => r.done).map(r => r.exercise));
+  container.innerHTML = '';
+  WORKOUT_ITEMS.forEach(({ ex, detail }) => {
+    const isDone = doneSet.has(ex);
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.innerHTML = `<div class="check-box ${isDone ? 'done' : ''}"></div><div style="flex:1"><div class="check-text ${isDone ? 'done' : ''}">${ex}</div><div style="font-size:11px;color:var(--text3)">${detail}</div></div>`;
+    div.onclick = async () => {
+      const box = div.querySelector('.check-box');
+      const txt = div.querySelector('.check-text');
+      const nowDone = !box.classList.contains('done');
+      box.classList.toggle('done', nowDone);
+      txt.classList.toggle('done', nowDone);
+      await sb.from('workout_log').upsert({ date: d, exercise: ex, done: nowDone }, { onConflict: 'date,exercise' });
+      updateWorkoutProgress();
+    };
+    container.appendChild(div);
+  });
+  updateWorkoutProgress();
+}
+
+function updateWorkoutProgress() {
+  const items = document.querySelectorAll('#workout-list .check-item');
+  const done = [...items].filter(i => i.querySelector('.check-box.done')).length;
+  const total = items.length;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('workout-progress-text').textContent = `${done} / ${total}`;
+  document.getElementById('workout-bar').style.width = pct + '%';
+  document.getElementById('m-workouts').textContent = done;
+  document.getElementById('g-workout').textContent = done;
+}
+
+// Weight
+async function saveWeight() {
+  const w = parseFloat(document.getElementById('w-weight').value);
+  const waist = parseFloat(document.getElementById('w-waist').value) || null;
+  if (!w || w < 50 || w > 200) { toast('Введи корректный вес'); return; }
+  await sb.from('weight_log').insert({ date: today(), weight: w, waist });
+  document.getElementById('w-weight').value = '';
+  document.getElementById('w-waist').value = '';
+  document.getElementById('m-weight').textContent = w.toFixed(1);
+  document.getElementById('m-goal-diff').textContent = Math.max(0, w - 75).toFixed(1);
+  document.getElementById('g-weight').textContent = w.toFixed(1);
+  toast('Вес сохранён ✓');
+  loadWeightData();
+}
+
+let wChart = null;
+async function loadWeightData() {
+  const { data } = await sb.from('weight_log').select('*').order('created_at', { ascending: true });
+  if (!data || data.length === 0) {
+    document.getElementById('weight-table').innerHTML = '<div class="loading">Нет данных. Внеси первый замер.</div>';
+    return;
+  }
+  // Table
+  let html = '<table><tr><th>Дата</th><th>Вес (кг)</th><th>Δ</th><th>Талия (см)</th></tr>';
+  data.forEach((r, i) => {
+    const prev = i > 0 ? data[i - 1].weight : null;
+    const delta = prev !== null ? (r.weight - prev).toFixed(1) : '—';
+    const dStr = delta !== '—' ? (parseFloat(delta) > 0 ? '+' + delta : delta) : '—';
+    const dColor = delta !== '—' && parseFloat(delta) < 0 ? 'color:var(--green)' : (delta !== '—' && parseFloat(delta) > 0 ? 'color:var(--red)' : '');
+    html += `<tr><td>${r.date}</td><td>${parseFloat(r.weight).toFixed(1)}</td><td style="${dColor}">${dStr}</td><td>${r.waist ? r.waist : '—'}</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('weight-table').innerHTML = html;
+  // Update metrics
+  const last = data[data.length - 1];
+  document.getElementById('m-weight').textContent = parseFloat(last.weight).toFixed(1);
+  document.getElementById('m-goal-diff').textContent = Math.max(0, last.weight - 75).toFixed(1);
+  document.getElementById('g-weight').textContent = parseFloat(last.weight).toFixed(1);
+  // Chart
+  const labels = data.map(r => r.date);
+  const vals = data.map(r => parseFloat(r.weight));
+  if (wChart) { wChart.data.labels = labels; wChart.data.datasets[0].data = vals; wChart.update(); return; }
+  wChart = new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Вес (кг)', data: vals, borderColor: '#6ee7b7', backgroundColor: 'rgba(110,231,183,0.08)', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#6ee7b7', borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 70, max: 110, ticks: { color: '#4a5168', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#4a5168', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// Diary
+async function saveDiary() {
+  const sleep = parseFloat(document.getElementById('d-sleep').value) || null;
+  const { error } = await sb.from('diary_log').insert({
+    date: today(), energy: state.energy, mood: state.mood, back_pain: state.back, sleep
+  });
+  if (error) { toast('Ошибка сохранения'); return; }
+  if (sleep) {
+    document.getElementById('m-sleep').textContent = sleep.toFixed(1);
+    document.getElementById('g-sleep').textContent = sleep.toFixed(1);
+  }
+  toast('Запись сохранена ✓');
+  document.getElementById('d-sleep').value = '';
+  ['energy', 'mood', 'back'].forEach(t => { state[t] = null; });
+  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+  loadDiaryData();
+}
+
+async function loadDiaryData() {
+  const { data } = await sb.from('diary_log').select('*').order('created_at', { ascending: false }).limit(30);
+  if (!data || data.length === 0) {
+    document.getElementById('diary-table').innerHTML = '<div class="loading">Записей пока нет</div>';
+    return;
+  }
+  let html = '<table><tr><th>Дата</th><th>Энергия</th><th>Настроение</th><th>Спина</th><th>Сон (ч)</th></tr>';
+  data.forEach(r => {
+    html += `<tr><td>${r.date}</td><td>${r.energy || '—'}</td><td>${r.mood || '—'}</td><td>${r.back_pain || '—'}</td><td>${r.sleep ? parseFloat(r.sleep).toFixed(1) : '—'}</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('diary-table').innerHTML = html;
+  if (data[0].sleep) {
+    document.getElementById('m-sleep').textContent = parseFloat(data[0].sleep).toFixed(1);
+    document.getElementById('g-sleep').textContent = parseFloat(data[0].sleep).toFixed(1);
+  }
+}
+
+// Init
+document.getElementById('today-date').textContent = TODAY;
+buildRatingRow('energy-row', 'energy');
+buildRatingRow('mood-row', 'mood');
+buildRatingRow('back-row', 'back');
+loadChecklist('checklist-today', CHECKLIST_ITEMS, 'checklist_log');
+loadChecklist('goals-checklist', GOALS_ITEMS, 'checklist_log');
+loadWorkoutChecklist();
+loadWeightData();
+loadDiaryData();
+</script>
+</body>
+</html>
