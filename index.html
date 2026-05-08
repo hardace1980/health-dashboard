@@ -94,12 +94,38 @@ input::placeholder{color:var(--text3);}
 .loading{color:var(--text3);font-size:13px;text-align:center;padding:20px;font-family:'Martian Mono',monospace;}
 .diary-section{margin-bottom:18px;}
 .diary-label{font-size:12px;color:var(--text2);margin-bottom:8px;font-family:'Martian Mono',monospace;}
+/* Mobile bottom nav */
+.bottom-nav{display:none;}
 @media(max-width:768px){
-  .sidebar{width:60px;}
-  .nav-item span,.logo-title,.logo-sub,.sync-status{display:none;}
-  .main{margin-left:60px;padding:16px;}
-  .metric-grid{grid-template-columns:repeat(2,1fr);}
+  .sidebar{display:none;}
+  .main{margin-left:0;padding:16px 12px 80px;}
+  .metric-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
   .two-col{grid-template-columns:1fr;}
+  .card{padding:14px 16px;}
+  .page-title{font-size:18px;}
+  .metric-val{font-size:24px;}
+  table{font-size:12px;}
+  th,td{padding:7px 8px;}
+  input[type=number]{width:110px;font-size:13px;}
+  .rating-btn{width:30px;height:30px;font-size:12px;}
+  .chart-wrap{height:180px;}
+  .bottom-nav{
+    display:flex;
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--bg2);
+    border-top:1px solid var(--border);
+    z-index:100;
+    padding:8px 0 max(8px, env(safe-area-inset-bottom));
+  }
+  .bottom-nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:4px 0;cursor:pointer;color:var(--text3);transition:all 0.15s;
+    font-size:10px;font-family:'Martian Mono',monospace;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bottom-nav-item.active{color:var(--accent);}
+  .bottom-nav-icon{font-size:18px;line-height:1;}
+  .toast{bottom:80px;}
 }
 </style>
 </head>
@@ -110,13 +136,23 @@ input::placeholder{color:var(--text3);}
       <div class="logo-title">Health</div>
       <div class="logo-sub mono">2026 · tracker</div>
     </div>
-    <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">◈</span><span>Обзор</span></div>
-    <div class="nav-item" onclick="showPage('weight')"><span class="nav-icon">⊡</span><span>Вес</span></div>
-    <div class="nav-item" onclick="showPage('workout')"><span class="nav-icon">◎</span><span>Тренировки</span></div>
-    <div class="nav-item" onclick="showPage('food')"><span class="nav-icon">◇</span><span>Питание</span></div>
-    <div class="nav-item" onclick="showPage('diary')"><span class="nav-icon">◉</span><span>Дневник</span></div>
-    <div class="nav-item" onclick="showPage('goals')"><span class="nav-icon">△</span><span>Цели</span></div>
+    <div class="nav-item active" onclick="showPage('overview',this)"><span class="nav-icon">◈</span><span>Обзор</span></div>
+    <div class="nav-item" onclick="showPage('weight',this)"><span class="nav-icon">⊡</span><span>Вес</span></div>
+    <div class="nav-item" onclick="showPage('workout',this)"><span class="nav-icon">◎</span><span>Тренировки</span></div>
+    <div class="nav-item" onclick="showPage('food',this)"><span class="nav-icon">◇</span><span>Питание</span></div>
+    <div class="nav-item" onclick="showPage('diary',this)"><span class="nav-icon">◉</span><span>Дневник</span></div>
+    <div class="nav-item" onclick="showPage('goals',this)"><span class="nav-icon">△</span><span>Цели</span></div>
     <div class="sidebar-footer"><div class="sync-status mono"><span class="sync-dot"></span>Supabase sync</div></div>
+  </nav>
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottom-nav" aria-label="Мобильная навигация">
+    <div class="bottom-nav-item active" onclick="showPage('overview',this)"><span class="bottom-nav-icon">◈</span>Обзор</div>
+    <div class="bottom-nav-item" onclick="showPage('weight',this)"><span class="bottom-nav-icon">⊡</span>Вес</div>
+    <div class="bottom-nav-item" onclick="showPage('workout',this)"><span class="bottom-nav-icon">◎</span>Трен.</div>
+    <div class="bottom-nav-item" onclick="showPage('food',this)"><span class="bottom-nav-icon">◇</span>Еда</div>
+    <div class="bottom-nav-item" onclick="showPage('diary',this)"><span class="bottom-nav-icon">◉</span>Дневник</div>
+    <div class="bottom-nav-item" onclick="showPage('goals',this)"><span class="bottom-nav-icon">△</span>Цели</div>
   </nav>
 
   <main class="main">
@@ -347,11 +383,21 @@ const GOALS_ITEMS = [
   'Вести дневник самочувствия каждый день'
 ];
 
-function showPage(name) {
+function showPage(name, mobileEl) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
+  // Desktop nav
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
+  });
+  // Mobile nav
+  if(mobileEl) mobileEl.classList.add('active');
+  else document.querySelectorAll('.bottom-nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
+  });
+  window.scrollTo(0,0);
 }
 
 function toast(msg) {
