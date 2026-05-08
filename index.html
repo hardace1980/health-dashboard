@@ -148,6 +148,23 @@ input::placeholder{color:var(--text3);}
 
 .tl-row{display:flex;align-items:flex-start;gap:10px;}
 .tl-row .check-box{margin-top:2px;flex-shrink:0;}
+
+.date-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px;}
+.date-nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.date-nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.date-nav-label{font-size:15px;font-weight:500;color:var(--text);min-width:200px;text-align:center;}
+.date-nav-sub{font-size:12px;color:var(--text3);text-align:center;margin-top:2px;}
+.plan-phase{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;}
+.plan-phase-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.plan-phase-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-family:'Martian Mono',monospace;font-weight:500;}
+.plan-phase-badge.current{background:var(--green-dim);color:var(--green);}
+.plan-phase-badge.upcoming{background:var(--bg3);color:var(--text3);}
+.plan-phase-title{font-size:16px;font-weight:500;color:var(--text);}
+.plan-phase-detail{font-size:13px;color:var(--text2);line-height:1.6;}
+.phase-exercises{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+.phase-ex{font-size:13px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border);}
+.phase-ex:last-child{border-bottom:none;}
+.phase-ex span{color:var(--text3);font-family:'Martian Mono',monospace;font-size:11px;margin-left:8px;}
 </style>
 </head>
 <body>
@@ -157,8 +174,9 @@ input::placeholder{color:var(--text3);}
       <div class="logo-title">Health</div>
       <div class="logo-sub mono">2026 · tracker</div>
     </div>
-    <div class="nav-item active" onclick="showPage('overview',this)"><span class="nav-icon">◈</span><span>Обзор</span></div>
-    <div class="nav-item" onclick="showPage('weight',this)"><span class="nav-icon">⊡</span><span>Вес</span></div>
+    <div class="nav-item active" onclick="showPage('overview',this)"><span class="nav-icon">◈</span><span>Сегодня</span></div>
+    <div class="nav-item" onclick="showPage('plan',this)"><span class="nav-icon">◫</span><span>План</span></div>
+    <div class="nav-item" onclick="showPage('metrics',this)"><span class="nav-icon">⊡</span><span>Показатели</span></div>
     <div class="nav-item" onclick="showPage('workout',this)"><span class="nav-icon">◎</span><span>Тренировки</span></div>
     <div class="nav-item" onclick="showPage('food',this)"><span class="nav-icon">◇</span><span>Питание</span></div>
     <div class="nav-item" onclick="showPage('diary',this)"><span class="nav-icon">◉</span><span>Дневник</span></div>
@@ -168,8 +186,9 @@ input::placeholder{color:var(--text3);}
 
   <!-- Mobile bottom nav -->
   <nav class="bottom-nav" aria-label="Мобильная навигация">
-    <div class="bottom-nav-item active" onclick="showPage('overview',this)"><span class="bottom-nav-icon">◈</span>Обзор</div>
-    <div class="bottom-nav-item" onclick="showPage('weight',this)"><span class="bottom-nav-icon">⊡</span>Вес</div>
+    <div class="bottom-nav-item active" onclick="showPage('overview',this)"><span class="bottom-nav-icon">◈</span>День</div>
+    <div class="bottom-nav-item" onclick="showPage('plan',this)"><span class="bottom-nav-icon">◫</span>План</div>
+    <div class="bottom-nav-item" onclick="showPage('metrics',this)"><span class="bottom-nav-icon">⊡</span>Данные</div>
     <div class="bottom-nav-item" onclick="showPage('workout',this)"><span class="bottom-nav-icon">◎</span>Трен.</div>
     <div class="bottom-nav-item" onclick="showPage('food',this)"><span class="bottom-nav-icon">◇</span>Еда</div>
     <div class="bottom-nav-item" onclick="showPage('diary',this)"><span class="bottom-nav-icon">◉</span>Дневник</div>
@@ -180,8 +199,14 @@ input::placeholder{color:var(--text3);}
 
     <!-- OVERVIEW -->
     <div id="page-overview" class="page active">
-      <div class="page-title">Сегодня</div>
-      <div class="page-sub" id="today-date-sub"></div>
+      <div class="date-nav">
+        <button class="date-nav-btn" onclick="changeDay(-1)" aria-label="Предыдущий день">&#9664;</button>
+        <div>
+          <div class="date-nav-label" id="date-nav-label">Сегодня</div>
+          <div class="date-nav-sub" id="date-nav-sub"></div>
+        </div>
+        <button class="date-nav-btn" onclick="changeDay(1)" aria-label="Следующий день">&#9654;</button>
+      </div>
 
       <div class="metric-grid">
         <div class="metric"><div class="metric-label">Вес</div><div class="metric-val mono" id="m-weight">102</div><div class="metric-sub">кг · цель 75</div></div>
@@ -204,6 +229,110 @@ input::placeholder{color:var(--text3);}
           <tr><td>Сон (ч)</td><td id="g-sleep">—</td><td>7.5</td><td><span class="badge badge-gray">Начать</span></td></tr>
           <tr><td>Анализы</td><td>—</td><td>Сданы</td><td><span class="badge badge-red">Не сданы</span></td></tr>
         </table>
+      </div>
+    </div>
+
+    <!-- PLAN -->
+    <div id="page-plan" class="page">
+      <div class="page-title">План восстановления</div>
+      <div class="page-sub">Старт: май 2026 · Текущий этап: Недели 1–2</div>
+
+      <div class="card">
+        <div class="card-title">Общий прогресс</div>
+        <table>
+          <tr><th>Срок</th><th>Что изменится</th><th>Статус</th></tr>
+          <tr><td>1–2 нед.</td><td>Лучше сон, больше энергии</td><td><span class="badge badge-amber">Сейчас</span></td></tr>
+          <tr><td>3–4 нед.</td><td>−2–3 кг, меньше боли в спине</td><td><span class="badge badge-gray">Впереди</span></td></tr>
+          <tr><td>6–8 нед.</td><td>Гибкость, тонус, одежда иначе</td><td><span class="badge badge-gray">Впереди</span></td></tr>
+          <tr><td>3 мес.</td><td>−5–7 кг, осанка, больше сил</td><td><span class="badge badge-gray">Впереди</span></td></tr>
+          <tr><td>6 мес.</td><td>−10–12 кг, явная форма</td><td><span class="badge badge-gray">Впереди</span></td></tr>
+          <tr><td>12 мес.</td><td>−14–17 кг, стабильная форма</td><td><span class="badge badge-gray">Впереди</span></td></tr>
+          <tr><td>2–3 года</td><td>Вес 75 кг, жир &lt;10%</td><td><span class="badge badge-gray">Цель</span></td></tr>
+        </table>
+      </div>
+
+      <div class="plan-phase">
+        <div class="plan-phase-header">
+          <span class="plan-phase-badge current">▶ Сейчас</span>
+          <div class="plan-phase-title">Недели 1–2: Активация</div>
+        </div>
+        <div class="plan-phase-detail">Приучить тело к регулярности. Безопасные упражнения с учётом грыжи. Никаких осевых нагрузок, становой тяги, прыжков. Фокус на кор, растяжку, мобильность.</div>
+        <div class="phase-exercises">
+          <div class="phase-ex">Кошка-корова <span>10 повт</span></div>
+          <div class="phase-ex">Ягодичный мост <span>3×15</span></div>
+          <div class="phase-ex">Птица-собака <span>3×10 каждой</span></div>
+          <div class="phase-ex">Растяжка грушевидной <span>30 сек × 2</span></div>
+          <div class="phase-ex">Растяжка сгибателей бедра <span>30 сек × 2</span></div>
+          <div class="phase-ex">Ходьба на месте <span>5 мин</span></div>
+        </div>
+      </div>
+
+      <div class="plan-phase">
+        <div class="plan-phase-header">
+          <span class="plan-phase-badge upcoming">Недели 3–4</span>
+          <div class="plan-phase-title" style="color:var(--text2)">Добавляем нагрузку</div>
+        </div>
+        <div class="plan-phase-detail" style="color:var(--text3)">Все упражнения нед. 1–2 + планка на локтях (3×30 сек), боковая планка (3×15 сек), стульчик у стены (3×20 сек).</div>
+      </div>
+
+      <div class="plan-phase">
+        <div class="plan-phase-header">
+          <span class="plan-phase-badge upcoming">Недели 5–6</span>
+          <div class="plan-phase-title" style="color:var(--text2)">Силовой акцент</div>
+        </div>
+        <div class="plan-phase-detail" style="color:var(--text3)">Все упражнения нед. 3–4 + приседания без веса (3×15), отжимания от колен (3×10–12).</div>
+      </div>
+
+      <div class="plan-phase">
+        <div class="plan-phase-header">
+          <span class="plan-phase-badge upcoming">Недели 7–8</span>
+          <div class="plan-phase-title" style="color:var(--text2)">Оценка и переход</div>
+        </div>
+        <div class="plan-phase-detail" style="color:var(--text3)">Взвешивание, замеры, оценка самочувствия. Если всё хорошо — переход на следующий 8-недельный блок с увеличением нагрузки.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Важные шаги</div>
+        <table>
+          <tr><th>Задача</th><th>Статус</th></tr>
+          <tr><td>Записаться к терапевту на анализы</td><td><span class="badge badge-red">Не сделано</span></td></tr>
+          <tr><td>Записаться к неврологу по грыже</td><td><span class="badge badge-red">Не сделано</span></td></tr>
+          <tr><td>Сдать анализы</td><td><span class="badge badge-red">Не сделано</span></td></tr>
+          <tr><td>Начать тренировки по плану нед. 1–2</td><td><span class="badge badge-amber">В процессе</span></td></tr>
+          <tr><td>Соблюдать план питания</td><td><span class="badge badge-amber">В процессе</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div id="page-metrics" class="page">
+      <div class="page-title">Показатели</div>
+      <div class="page-sub">Объективные данные — вес, сон, ЧСС, анализы</div>
+
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-label">Вес</div><div class="metric-val mono" id="metrics-weight">102</div><div class="metric-sub">кг · цель 75</div></div>
+        <div class="metric"><div class="metric-label">ЧСС в покое</div><div class="metric-val mono" id="metrics-hr">—</div><div class="metric-sub">уд/мин</div></div>
+        <div class="metric"><div class="metric-label">Сон</div><div class="metric-val mono" id="metrics-sleep">—</div><div class="metric-sub">часов вчера</div></div>
+        <div class="metric"><div class="metric-label">Шаги</div><div class="metric-val mono" id="metrics-steps">—</div><div class="metric-sub">вчера</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Анализы крови</div>
+        <table>
+          <tr><th>Анализ</th><th>Норма</th><th>Мой результат</th><th>Статус</th></tr>
+          <tr><td>Тестостерон общий</td><td>12–35 нмоль/л</td><td id="an-test">—</td><td><span class="badge badge-gray" id="an-test-s">Не сдан</span></td></tr>
+          <tr><td>ГСПГ</td><td>10–57 нмоль/л</td><td id="an-gspg">—</td><td><span class="badge badge-gray" id="an-gspg-s">Не сдан</span></td></tr>
+          <tr><td>ТТГ</td><td>0.4–4.0 мМЕ/л</td><td id="an-ttg">—</td><td><span class="badge badge-gray" id="an-ttg-s">Не сдан</span></td></tr>
+          <tr><td>Витамин D</td><td>&gt;75 нмоль/л</td><td id="an-vitd">—</td><td><span class="badge badge-gray" id="an-vitd-s">Не сдан</span></td></tr>
+          <tr><td>Витамин B12</td><td>200–900 пг/мл</td><td id="an-b12">—</td><td><span class="badge badge-gray" id="an-b12-s">Не сдан</span></td></tr>
+          <tr><td>Ферритин</td><td>30–300 нг/мл</td><td id="an-ferr">—</td><td><span class="badge badge-gray" id="an-ferr-s">Не сдан</span></td></tr>
+          <tr><td>Глюкоза</td><td>3.9–5.6 ммоль/л</td><td id="an-gluc">—</td><td><span class="badge badge-gray" id="an-gluc-s">Не сдан</span></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Динамика веса</div>
+        <div class="chart-wrap"><canvas id="metricsWeightChart" role="img" aria-label="График веса"></canvas></div>
       </div>
     </div>
 
@@ -298,7 +427,7 @@ input::placeholder{color:var(--text3);}
     <!-- DIARY -->
     <div id="page-diary" class="page">
       <div class="page-title">Дневник</div>
-      <div class="page-sub">Заполняй вечером — 2–3 минуты. Шкала 1–10.</div>
+      <div class="page-sub">Заполняй вечером — 3 минуты</div>
       <div class="card">
         <div class="card-title">Запись за сегодня</div>
         <div class="diary-section">
@@ -306,18 +435,26 @@ input::placeholder{color:var(--text3);}
           <div class="rating-row" id="energy-row"></div>
         </div>
         <div class="diary-section">
-          <div class="diary-label">Настроение (1–10)</div>
-          <div class="rating-row" id="mood-row"></div>
-        </div>
-        <div class="diary-section">
           <div class="diary-label">Боль в спине (1=нет, 10=сильная)</div>
           <div class="rating-row" id="back-row"></div>
         </div>
         <div class="diary-section">
-          <div class="diary-label">Сон (часов)</div>
+          <div class="diary-label">Сон (часов) · с Apple Watch</div>
           <div class="input-row">
             <input type="number" id="d-sleep" placeholder="7.5" step="0.5" min="2" max="12">
-            <button class="btn btn-primary" onclick="saveDiary()">Сохранить запись</button>
+          </div>
+        </div>
+        <div class="diary-section">
+          <div class="diary-label">ЧСС в покое (уд/мин) · с Apple Watch</div>
+          <div class="input-row">
+            <input type="number" id="d-hr" placeholder="65" step="1" min="30" max="150">
+          </div>
+        </div>
+        <div class="diary-section">
+          <div class="diary-label">Шаги · с Apple Watch</div>
+          <div class="input-row">
+            <input type="number" id="d-steps" placeholder="5000" step="100" min="0" max="50000">
+            <button class="btn btn-primary" onclick="saveDiary()">Сохранить</button>
           </div>
         </div>
       </div>
@@ -347,18 +484,7 @@ input::placeholder{color:var(--text3);}
         <div class="card-title">Первые шаги — чеклист</div>
         <div id="goals-checklist"><div class="loading">Загрузка...</div></div>
       </div>
-      <div class="card">
-        <div class="card-title">Анализы</div>
-        <table>
-          <tr><th>Анализ</th><th>Норма</th><th>Мой результат</th><th>Статус</th></tr>
-          <tr><td>Тестостерон общий</td><td>12–35 нмоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-          <tr><td>ТТГ</td><td>0.4–4.0 мМЕ/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-          <tr><td>Витамин D</td><td>&gt;75 нмоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-          <tr><td>Витамин B12</td><td>200–900 пг/мл</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-          <tr><td>Ферритин</td><td>30–300 нг/мл</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-          <tr><td>Глюкоза натощак</td><td>3.9–5.6 ммоль/л</td><td>—</td><td><span class="badge badge-gray">Не сдан</span></td></tr>
-        </table>
-      </div>
+
     </div>
 
   </main>
@@ -570,17 +696,24 @@ async function loadWeightData() {
 // Diary
 async function saveDiary() {
   const sleep = parseFloat(document.getElementById('d-sleep').value) || null;
+  const resting_hr = parseInt(document.getElementById('d-hr').value) || null;
+  const steps = parseInt(document.getElementById('d-steps').value) || null;
   const { error } = await sb.from('diary_log').insert({
-    date: today(), energy: state.energy, mood: state.mood, back_pain: state.back, sleep
+    date: today(), energy: state.energy, back_pain: state.back, sleep, resting_hr, steps
   });
   if (error) { toast('Ошибка сохранения'); return; }
   if (sleep) {
     document.getElementById('m-sleep').textContent = sleep.toFixed(1);
     document.getElementById('g-sleep').textContent = sleep.toFixed(1);
+    document.getElementById('metrics-sleep').textContent = sleep.toFixed(1);
   }
+  if (resting_hr) document.getElementById('metrics-hr').textContent = resting_hr;
+  if (steps) document.getElementById('metrics-steps').textContent = steps.toLocaleString();
   toast('Запись сохранена ✓');
   document.getElementById('d-sleep').value = '';
-  ['energy', 'mood', 'back'].forEach(t => { state[t] = null; });
+  document.getElementById('d-hr').value = '';
+  document.getElementById('d-steps').value = '';
+  ['energy', 'back'].forEach(t => { state[t] = null; });
   document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
   loadDiaryData();
 }
@@ -591,9 +724,9 @@ async function loadDiaryData() {
     document.getElementById('diary-table').innerHTML = '<div class="loading">Записей пока нет</div>';
     return;
   }
-  let html = '<table><tr><th>Дата</th><th>Энергия</th><th>Настроение</th><th>Спина</th><th>Сон (ч)</th></tr>';
+  let html = '<table><tr><th>Дата</th><th>Энергия</th><th>Спина</th><th>Сон (ч)</th><th>ЧСС</th><th>Шаги</th></tr>';
   data.forEach(r => {
-    html += `<tr><td>${r.date}</td><td>${r.energy || '—'}</td><td>${r.mood || '—'}</td><td>${r.back_pain || '—'}</td><td>${r.sleep ? parseFloat(r.sleep).toFixed(1) : '—'}</td></tr>`;
+    html += `<tr><td>${r.date}</td><td>${r.energy || '—'}</td><td>${r.back_pain || '—'}</td><td>${r.sleep ? parseFloat(r.sleep).toFixed(1) : '—'}</td><td>${r.resting_hr || '—'}</td><td>${r.steps ? r.steps.toLocaleString() : '—'}</td></tr>`;
   });
   html += '</table>';
   document.getElementById('diary-table').innerHTML = html;
@@ -603,6 +736,39 @@ async function loadDiaryData() {
   }
 }
 
+
+
+// Date navigation
+let currentDateOffset = 0;
+const DAY_NAMES = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MONTH_NAMES = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']; // 0 = today, -1 = yesterday, +1 = tomorrow
+
+function changeDay(dir) {
+  currentDateOffset += dir;
+  updateDateDisplay();
+  updateDateDisplay();
+buildTimeline();
+}
+
+function getDisplayDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + currentDateOffset);
+  return d;
+}
+
+function getDisplayDateStr() {
+  return getDisplayDate().toLocaleDateString('ru-RU');
+}
+
+function updateDateDisplay() {
+  const d = getDisplayDate();
+  const label = document.getElementById('date-nav-label');
+  const sub = document.getElementById('date-nav-sub');
+  if (!label || !sub) return;
+  const prefix = currentDateOffset === 0 ? 'Сегодня · ' : currentDateOffset === -1 ? 'Вчера · ' : currentDateOffset === 1 ? 'Завтра · ' : '';
+  label.textContent = prefix + DAY_NAMES[d.getDay()];
+  sub.textContent = d.getDate() + ' ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+}
 
 // Timeline
 const WEEKDAY_SCHEDULE = [
@@ -641,27 +807,26 @@ function timeToMinutes(t) {
 
 async function buildTimeline() {
   const now = new Date();
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+  const displayDate = getDisplayDate();
+  const isWeekend = displayDate.getDay() === 0 || displayDate.getDay() === 6;
   const schedule = isWeekend ? WEEKEND_SCHEDULE : WEEKDAY_SCHEDULE;
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  const dayNames = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
-  const monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  document.getElementById('today-date-sub').textContent =
-    dayNames[now.getDay()] + ', ' + now.getDate() + ' ' + monthNames[now.getMonth()] + ' ' + now.getFullYear();
+  const currentMinutes = currentDateOffset === 0 ? now.getHours() * 60 + now.getMinutes() : (currentDateOffset < 0 ? 24*60 : 0);
+  updateDateDisplay();
 
   // Load done items from DB
-  const d = today();
+  const d = getDisplayDateStr();
   const { data } = await sb.from('checklist_log').select('*').eq('date', d);
   const doneSet = new Set((data||[]).filter(r=>r.done).map(r=>r.item));
 
   const container = document.getElementById('timeline');
   container.innerHTML = '';
 
-  // Find current item
+  // Find current item (only highlight on today)
   let currentIdx = -1;
-  for (let i = schedule.length - 1; i >= 0; i--) {
-    if (timeToMinutes(schedule[i].time) <= currentMinutes) { currentIdx = i; break; }
+  if (currentDateOffset === 0) {
+    for (let i = schedule.length - 1; i >= 0; i--) {
+      if (timeToMinutes(schedule[i].time) <= currentMinutes) { currentIdx = i; break; }
+    }
   }
 
   schedule.forEach((item, idx) => {
@@ -710,7 +875,6 @@ async function buildTimeline() {
 
 // Init
 buildRatingRow('energy-row', 'energy');
-buildRatingRow('mood-row', 'mood');
 buildRatingRow('back-row', 'back');
 buildTimeline();
 loadChecklist('goals-checklist', GOALS_ITEMS, 'checklist_log');
